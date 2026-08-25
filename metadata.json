@@ -1,0 +1,6 @@
+{
+  "name": "Community Savings & Loan SACCO",
+  "description": "Production-ready fintech MVP for SACCO & ROSCA community savings groups with savings tracking, loan request lifecycle, ledger audit, and admin approval workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

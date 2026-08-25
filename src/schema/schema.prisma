@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  member
+  admin
+}
+
+enum UserStatus {
+  active
+  suspended
+}
+
+enum ContributionStatus {
+  pending
+  approved
+  rejected
+}
+
+enum LoanStatus {
+  pending
+  approved
+  rejected
+  disbursed
+  completed
+}
+
+enum TransactionType {
+  contribution
+  loan_disbursement
+  loan_repayment
+  manual_adjustment
+  dividend_payout
+}
+
+enum TransactionDirection {
+  credit
+  debit
+}
+
+model Profile {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @unique @map("user_id") @db.Uuid
+  fullName     String     @map("full_name")
+  email        String     @unique
+  phoneNumber  String     @map("phone_number")
+  role         UserRole   @default(member)
+  status       UserStatus @default(active)
+  avatarUrl    String?    @map("avatar_url")
+  occupation   String?
+  nationalId   String?    @map("national_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  savingsAccount SavingsAccount?
+  contributions  Contribution[]
+  loans          Loan[]
+  transactions   Transaction[]
+
+  @@map("profiles")
+}
+
+model SavingsAccount {
+  id               String   @id @default(uuid()) @db.Uuid
+  profileId        String   @unique @map("profile_id") @db.Uuid
+  totalContributed Decimal  @default(0.00) @map("total_contributed") @db.Decimal(14, 2)
+  currentBalance   Decimal  @default(0.00) @map("current_balance") @db.Decimal(14, 2)
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("savings_accounts")
+}
+
+model Contribution {
+  id              String             @id @default(uuid()) @db.Uuid
+  profileId       String             @map("profile_id") @db.Uuid
+  amount          Decimal            @db.Decimal(14, 2)
+  paymentMethod   String             @map("payment_method")
+  referenceCode   String?            @map("reference_code")
+  status          ContributionStatus @default(pending)
+  notes           String?
+  receiptUrl      String?            @map("receipt_url")
+  rejectionReason String?            @map("rejection_reason")
+  approvedAt      DateTime?          @map("approved_at")
+  submittedAt     DateTime           @default(now()) @map("submitted_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+  @@map("contributions")
+}
+
+model Loan {
+  id                 String     @id @default(uuid()) @db.Uuid
+  profileId          String     @map("profile_id") @db.Uuid
+  amountRequested    Decimal    @map("amount_requested") @db.Decimal(14, 2)
+  interestRate       Decimal    @default(5.00) @map("interest_rate") @db.Decimal(5, 2)
+  durationMonths     Int        @map("duration_months")
+  totalPayable       Decimal    @map("total_payable") @db.Decimal(14, 2)
+  remainingBalance   Decimal    @map("remaining_balance") @db.Decimal(14, 2)
+  monthlyInstallment Decimal    @map("monthly_installment") @db.Decimal(14, 2)
+  totalPaid          Decimal    @default(0.00) @map("total_paid") @db.Decimal(14, 2)
+  purpose            String
+  status             LoanStatus @default(pending)
+  rejectionReason    String?    @map("rejection_reason")
+  approvedAt         DateTime?  @map("approved_at")
+  disbursedAt        DateTime?  @map("disbursed_at")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+  @@map("loans")
+}
+
+model Transaction {
+  id          String               @id @default(uuid()) @db.Uuid
+  profileId   String               @map("profile_id") @db.Uuid
+  type        TransactionType
+  amount      Decimal              @db.Decimal(14, 2)
+  direction   TransactionDirection
+  description String
+  referenceId String?              @map("reference_id") @db.Uuid
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([createdAt(sort: Desc)])
+  @@map("transactions")
+}
